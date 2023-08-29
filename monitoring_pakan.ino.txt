@@ -1,0 +1,78 @@
+#include <ESP8266WiFi.h>
+#include <FirebaseArduino.h>//jika error maka Downgrade "Arduinojson by Benoit Blanchon" to the version 5.13.2. di menu manage library
+// Set these to run example.
+#define FIREBASE_HOST "arduinouyp.firebaseio.com"
+#define FIREBASE_AUTH "I4ypeV1hhiElxSk4JBwUB8qWP33Zcp5GsEm1v1oi"
+#define WIFI_SSID "ARDUINO"
+#define WIFI_PASSWORD "123456789"
+
+#include <Servo.h> 
+Servo myservo;
+int katup=D5;//servo
+const int pengirim =D3; //trigger di pin 
+const int penerima =D4; //echo di pin 
+long durasi;
+long jarak;
+int wpakan;
+String nilai;
+
+void setup() { //wemos d1 besar
+  myservo.attach(katup);
+  myservo.write(3);
+  //pinMode(LED_BUILTIN,OUTPUT);
+  pinMode(pengirim, OUTPUT); // Set pengirim/trigger
+  pinMode(penerima, INPUT); // Set penerima/echo
+ 
+  // connect to wifi.
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+  }
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  
+}
+
+void loop() {
+/*
+if (wpakan==10){ //seting 10 detik buka pakan
+  myservo.write(90);
+  delay(1000);
+  myservo.write(3);
+  wpakan=0;
+  }
+else{
+  wpakan++;
+  }
+*/
+  
+// bersihkan nilai pengirim
+digitalWrite(pengirim, LOW);
+delayMicroseconds(2);
+
+// Sets pengirim on LOW state for 10 micro seconds
+digitalWrite(pengirim, HIGH);
+delayMicroseconds(10);
+digitalWrite(pengirim, LOW);
+
+// membaca penerima, mengkonversi gelombang dalam bentuk microseconds
+durasi = pulseIn(penerima,HIGH);
+
+// menghitung jarak
+jarak= durasi*0.034/2;
+jarak=jarak*100; //mengubah data ke dalam centi meter
+Firebase.setFloat("pakanayam/jarak", jarak);
+
+  nilai=Firebase.getString("pakanayam/katup");
+  if (nilai.indexOf("0")>=0){     //tutup kunci
+  //digitalWrite(LED_BUILTIN, LOW);
+  myservo.write(3);
+  }
+  else if(nilai.indexOf("1")>=0){ //buka kunci
+  Firebase.setString("pakanayam/katup", "0");
+  myservo.write(90);
+  delay(2000);
+  myservo.write(3);
+  }
+
+delay(1500);
+}
